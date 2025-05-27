@@ -3,7 +3,11 @@ package com.libms.services;
 import com.libms.dtos.request.BookRequest;
 import com.libms.models.Book;
 import com.libms.repositories.BookRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,22 +23,34 @@ public class BookServiceImplementation implements BookService {
     }
 
     @Override
+    @Cacheable(cacheNames = "allBooks")
     public List<Book> getBooks() {
         return bookRepository.findAll();
     }
 
     @Override
+    @Cacheable(cacheNames = "book", key = "#id")
     public Optional<Book> getBookById(long id) {
         return bookRepository.findById(id);
     }
 
     @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "allBooks"),
+            @CacheEvict(cacheNames = "book", key = "#id")
+    })
     public Book addBook(BookRequest bookRequest) {
         Book book = new Book(bookRequest.getTitle(), bookRequest.getAuthor(), bookRequest.getIsbn());
         return bookRepository.save(book);
     }
 
     @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "allBooks"),
+            @CacheEvict(cacheNames = "book", key = "#id")
+    })
     public Book updateBook(long id, BookRequest bookRequest) {
         Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found"));
         book.setTitle(bookRequest.getTitle());
@@ -44,6 +60,7 @@ public class BookServiceImplementation implements BookService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"allBooks", "book"}, key = "#id")
     public void deleteBook(long id) {
         bookRepository.deleteById(id);
     }
