@@ -23,23 +23,20 @@ public class BookServiceImplementation implements BookService {
     }
 
     @Override
-    @Cacheable(cacheNames = "allBooks")
+    @Cacheable(cacheNames = "books", key = "'books'")
     public List<Book> getBooks() {
         return bookRepository.findAll();
     }
 
     @Override
-    @Cacheable(cacheNames = "book", key = "#id")
+    @Cacheable(cacheNames = "book", key = "'book_' + #id")
     public Optional<Book> getBookById(long id) {
         return bookRepository.findById(id);
     }
 
     @Override
     @Transactional
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "allBooks"),
-            @CacheEvict(cacheNames = "book", key = "#id")
-    })
+    @CacheEvict(cacheNames = "books", allEntries = true)
     public Book addBook(BookRequest bookRequest) {
         Book book = new Book(bookRequest.getTitle(), bookRequest.getAuthor(), bookRequest.getIsbn());
         return bookRepository.save(book);
@@ -47,10 +44,7 @@ public class BookServiceImplementation implements BookService {
 
     @Override
     @Transactional
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "allBooks"),
-            @CacheEvict(cacheNames = "book", key = "#id")
-    })
+    @Caching(evict = {@CacheEvict(cacheNames = "books", allEntries = true), @CacheEvict(cacheNames = "book", key = "'book_' + #id")})
     public Book updateBook(long id, BookRequest bookRequest) {
         Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found"));
         book.setTitle(bookRequest.getTitle());
@@ -60,7 +54,10 @@ public class BookServiceImplementation implements BookService {
     }
 
     @Override
-    @CacheEvict(cacheNames = {"allBooks", "book"}, key = "#id")
+    @Transactional
+    @Caching(evict = {@CacheEvict(cacheNames = "books", allEntries = true),
+            @CacheEvict(cacheNames = "book", key = "'book_' + #id")
+    })
     public void deleteBook(long id) {
         bookRepository.deleteById(id);
     }
